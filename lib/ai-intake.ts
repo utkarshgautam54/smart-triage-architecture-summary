@@ -1,5 +1,6 @@
 import 'server-only'
 import { generateText, Output } from 'ai'
+import { google } from '@ai-sdk/google'
 import { z } from 'zod'
 import { TRIAGE_CATEGORIES } from './types'
 
@@ -35,7 +36,7 @@ export async function parseReferral(
   input: { kind: 'pdf'; data: Uint8Array; filename: string } | { kind: 'text'; text: string },
 ) {
   const { output } = await generateText({
-    model: 'anthropic/claude-sonnet-4.6',
+    model: process.env.GOOGLE_GENERATIVE_AI_API_KEY ? google('gemini-3.5-flash') : 'google/gemini-3.5-flash',
     instructions: INSTRUCTIONS,
     output: Output.object({ schema: referralSchema }),
     messages: [
