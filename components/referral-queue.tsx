@@ -7,6 +7,8 @@ import { StatusBadge, Tag, UrgencyMeter } from './referral-badges'
 
 type Filter = ReferralStatus | 'all' | 'audit'
 
+const UNLINKED_REFERRAL_IDS = new Set(['ref-1042', 'ref-1041', 'ref-1040', 'ref-1039', 'ref-1038'])
+
 const FILTERS: Filter[] = ['all', 'new', 'in_review', 'triaged', 'booked', 'declined', 'audit']
 
 function filterLabel(f: Filter) {
@@ -80,45 +82,56 @@ export function ReferralQueue({
           {visible.map((r) => {
             const urgency = r.final?.urgency ?? r.suggested.urgency
             const category = r.final?.category ?? r.suggested.category
+            const content = (
+              <>
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-medium">{r.patient.name}</span>
+                    <StatusBadge status={r.status} />
+                    {r.needsAudit && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-warning-foreground">
+                        <ShieldCheck className="size-3.5" aria-hidden="true" /> Audit
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">{r.reason}</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {r.missingInfo.length > 0 && (
+                      <Tag tone="alert">
+                        <AlertTriangle className="mr-1 size-3" aria-hidden="true" />
+                        {r.missingInfo.length} missing
+                      </Tag>
+                    )}
+                    {r.tags.slice(0, 3).map((t) => (
+                      <Tag key={t}>{t}</Tag>
+                    ))}
+                  </div>
+                </div>
+                <div className="hidden w-40 flex-col gap-1.5 sm:flex">
+                  <UrgencyMeter value={urgency} />
+                  <span className="text-xs text-muted-foreground">{category}</span>
+                </div>
+                <div className="hidden w-36 text-right text-xs text-muted-foreground md:block">
+                  <p>{r.referringProvider.clinic}</p>
+                  <p className="mt-0.5">{timeAgo(r.receivedAt)}</p>
+                </div>
+              </>
+            )
+            const isUnlinked = UNLINKED_REFERRAL_IDS.has(r.id)
+
             return (
               <li key={r.id}>
-                <Link
-                  href={`/referrals/${r.id}`}
-                  className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-                >
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-medium">{r.patient.name}</span>
-                      <StatusBadge status={r.status} />
-                      {r.needsAudit && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-warning-foreground">
-                          <ShieldCheck className="size-3.5" aria-hidden="true" /> Audit
-                        </span>
-                      )}
-                    </div>
-                    <p className="truncate text-sm text-muted-foreground">{r.reason}</p>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {r.missingInfo.length > 0 && (
-                        <Tag tone="alert">
-                          <AlertTriangle className="mr-1 size-3" aria-hidden="true" />
-                          {r.missingInfo.length} missing
-                        </Tag>
-                      )}
-                      {r.tags.slice(0, 3).map((t) => (
-                        <Tag key={t}>{t}</Tag>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="hidden w-40 flex-col gap-1.5 sm:flex">
-                    <UrgencyMeter value={urgency} />
-                    <span className="text-xs text-muted-foreground">{category}</span>
-                  </div>
-                  <div className="hidden w-36 text-right text-xs text-muted-foreground md:block">
-                    <p>{r.referringProvider.clinic}</p>
-                    <p className="mt-0.5">{timeAgo(r.receivedAt)}</p>
-                  </div>
-                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                </Link>
+                {isUnlinked ? (
+                  <div className="flex items-center gap-4 px-4 py-3.5">{content}</div>
+                ) : (
+                  <Link
+                    href={`/referrals/${r.id}`}
+                    className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                  >
+                    {content}
+                    <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </Link>
+                )}
               </li>
             )
           })}
